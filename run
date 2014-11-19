@@ -1,0 +1,53 @@
+#! /usr/bin/env python
+import argparse
+import os
+import subprocess
+import sys
+
+REPOSITORY_PATH = '/django/'
+REPOSITORY_TEST_PATH = '/django/tests'
+GITHUB_PATH = 'http://github.com/%s/django.git'
+
+def run_command(command):
+    process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    process.wait()
+    return process.returncode == 0, process.stdout.read()
+
+def main(repository, revision):
+    os.chdir(REPOSITORY_TEST_PATH)
+
+    print("*** RESETTING BRANCH ***")
+    success, text = run_command(['git', 'reset', '--hard'])
+    if not success:
+        print("*** RESET SCRIPT FAILED ***")
+        return
+
+    print("*** ADDING REMOTE BRANCH %s ***" % (GITHUB_PATH % repository))
+    success, text = run_command(['git', 'remote', 'add', '%s' % repository, GITHUB_PATH % repository])
+
+    print("*** FETCHING FROM %s ***" % (GITHUB_PATH % repository))
+    success, text = run_command(['git', 'fetch', '%s' % repository])
+    if not success:
+        print("*** FETCHING SCRIPT FAILED ***")
+        return
+
+    print("*** CHECKING OUT FROM %s ***" % revision)
+    success, text = run_command(['git', 'checkout', '%s' % revision])
+    if not success:
+        print("*** CHECKING OUT SCRIPT FAILED ***")
+        return
+
+    sys.path.append(REPOSITORY_PATH)
+    sys.path.append(REPOSITORY_TEST_PATH)
+    from runtests import django_tests
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'test_sqlite'
+    failures = django_tests(2, True, False, [])
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Test Django codebase')
+    parser.add_argument('--repository', type=str, default="django", help='The repository')
+    parser.add_argument('--revision', type=str, default="master", help='revision number')
+    args = parser.parse_args()
+    main(args.repository, args.revision)
+
