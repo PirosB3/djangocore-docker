@@ -13,7 +13,7 @@ def run_command(command):
     process.wait()
     return process.returncode == 0, process.stdout.read()
 
-def main(repository, revision):
+def main(repository, revision, only):
     os.chdir(REPOSITORY_TEST_PATH)
 
     print("*** RESETTING BRANCH ***")
@@ -41,13 +41,13 @@ def main(repository, revision):
     sys.path.append(REPOSITORY_TEST_PATH)
     from runtests import django_tests
     os.environ['DJANGO_SETTINGS_MODULE'] = 'test_sqlite'
-    failures = django_tests(2, True, False, [])
+    failures = django_tests(2, True, False, only)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test Django codebase')
     parser.add_argument('--repository', type=str, default="django", help='The repository')
     parser.add_argument('--revision', type=str, default="master", help='revision number')
+    parser.add_argument('--only', nargs='+', type=str, default=[])
     args = parser.parse_args()
-    main(args.repository, args.revision)
-
+    main(args.repository, args.revision, args.only)
