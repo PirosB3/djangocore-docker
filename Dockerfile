@@ -8,9 +8,11 @@ RUN apt-get install -y locales
 RUN dpkg-reconfigure locales && \
     locale-gen C.UTF-8 && \
     /usr/sbin/update-locale LANG=C.UTF-8
+RUN pip install psycopg2
 ENV LC_ALL C.UTF-8
 
 ADD run /usr/local/bin/run
+ADD profiles /profiles
 VOLUME ["/django"]
 ENTRYPOINT ["/usr/local/bin/run"]
 CMD ["--help"]
