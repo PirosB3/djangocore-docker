@@ -41,8 +41,7 @@ def main(repository, revision, only):
     sys.path.append(REPOSITORY_TEST_PATH)
     from runtests import django_tests
     os.environ['DJANGO_SETTINGS_MODULE'] = 'test_sqlite'
-    failures = django_tests(2, True, False, only)
-
+    failures = django_tests(2, True, False, False, False, only)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test Django codebase')
