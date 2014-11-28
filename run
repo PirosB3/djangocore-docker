@@ -7,20 +7,20 @@ import sys
 REPOSITORY_PATH = '/django/'
 REPOSITORY_TEST_PATH = '/django/tests'
 GITHUB_PATH = 'http://github.com/%s/django.git'
+PROFILES_DIR = '/profiles'
+
 
 def run_command(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     process.wait()
     return process.returncode == 0, process.stdout.read()
 
-def main(repository, revision, only):
-    os.chdir(REPOSITORY_TEST_PATH)
 
+def fetch_and_check_out(repository, revision):
     print("*** RESETTING BRANCH ***")
     success, text = run_command(['git', 'reset', '--hard'])
     if not success:
-        print("*** RESET SCRIPT FAILED ***")
-        return
+        raise Exception("*** RESET SCRIPT FAILED ***")
 
     print("*** ADDING REMOTE BRANCH %s ***" % (GITHUB_PATH % repository))
     success, text = run_command(['git', 'remote', 'add', '%s' % repository, GITHUB_PATH % repository])
@@ -28,25 +28,31 @@ def main(repository, revision, only):
     print("*** FETCHING FROM %s ***" % (GITHUB_PATH % repository))
     success, text = run_command(['git', 'fetch', '%s' % repository])
     if not success:
-        print("*** FETCHING SCRIPT FAILED ***")
-        return
+        raise Exception("*** FETCHING SCRIPT FAILED ***")
 
     print("*** CHECKING OUT FROM %s ***" % revision)
     success, text = run_command(['git', 'checkout', '%s' % revision])
     if not success:
-        print("*** CHECKING OUT SCRIPT FAILED ***")
-        return
+        raise Exception("*** CHECKING OUT SCRIPT FAILED ***")
 
-    sys.path.append(REPOSITORY_PATH)
-    sys.path.append(REPOSITORY_TEST_PATH)
+
+def main(repository, revision, only, profile):
+    os.chdir(REPOSITORY_TEST_PATH)
+    fetch_and_check_out(repository, revision)
+
+    for path in (REPOSITORY_PATH, REPOSITORY_TEST_PATH, PROFILES_DIR):
+        sys.path.append(path)
+
     from runtests import django_tests
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'test_sqlite'
-    failures = django_tests(2, True, False, False, False, only)
+    os.environ['DJANGO_SETTINGS_MODULE'] = profile
+    django_tests(2, True, False, False, False, only)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test Django codebase')
     parser.add_argument('--repository', type=str, default="django", help='The repository')
+    parser.add_argument('--profile', type=str, default="test_sqlite", help='Profile name')
     parser.add_argument('--revision', type=str, default="master", help='revision number')
     parser.add_argument('--only', nargs='+', type=str, default=[])
     args = parser.parse_args()
-    main(args.repository, args.revision, args.only)
+    main(args.repository, args.revision, args.only, args.profile)
